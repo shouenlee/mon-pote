@@ -80,10 +80,6 @@ fun ChatScreen(
                     isChecking = uiState.correctionState == CorrectionState.LOADING,
                     onTextChange = { newText ->
                         inputText = newText
-                        // Auto-dismiss corrections when user edits text (stale)
-                        if (uiState.correctionState != CorrectionState.IDLE) {
-                            viewModel.dismissCorrection()
-                        }
                     },
                     onSend = {
                         if (inputText.isNotBlank()) {
