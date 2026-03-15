@@ -23,4 +23,5 @@ data class MessageEntity(
     val content: String,
     val role: String,
     val timestamp: Long,
+    val translation: String? = null,
 )

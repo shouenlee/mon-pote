@@ -11,4 +11,5 @@ data class Message(
     val content: String,
     val role: Role,
     val timestamp: Long,
+    val translation: String? = null,
 )

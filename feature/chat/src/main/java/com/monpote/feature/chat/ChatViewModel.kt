@@ -142,6 +142,42 @@ class ChatViewModel @Inject constructor(
         _uiState.update { it.copy(correctionState = CorrectionState.IDLE, correctionResult = null) }
     }
 
+    fun toggleTranslation(messageId: Long) {
+        _uiState.update { state ->
+            val current = state.visibleTranslations
+            val updated = if (messageId in current) current - messageId else current + messageId
+            state.copy(visibleTranslations = updated)
+        }
+    }
+
+    private fun translateMessage(messageId: Long, content: String) {
+        viewModelScope.launch {
+            try {
+                val response = openAiService.chatCompletion(
+                    deployment = BuildConfig.AZURE_OPENAI_DEPLOYMENT,
+                    request = ChatRequest(
+                        messages = listOf(
+                            ChatMessage(
+                                role = "system",
+                                content = "Translate the following French text to English. Return ONLY the English translation, nothing else.",
+                            ),
+                            ChatMessage(role = "user", content = content),
+                        ),
+                        maxCompletionTokens = 4096,
+                    ),
+                )
+
+                val translation = response.choices.firstOrNull()?.message?.content
+                    ?.takeIf { it.isNotBlank() }
+                    ?: ""
+
+                messageDao.updateTranslation(messageId, translation)
+            } catch (e: Exception) {
+                messageDao.updateTranslation(messageId, "")
+            }
+        }
+    }
+
     private suspend fun fetchAiResponse() {
         val character = _uiState.value.character ?: return
 
@@ -167,7 +203,7 @@ class ChatViewModel @Inject constructor(
             val assistantContent = msg?.content ?: msg?.reasoningContent
             if (assistantContent != null) {
                 val now = System.currentTimeMillis()
-                messageDao.insert(
+                val messageId = messageDao.insert(
                     MessageEntity(
                         conversationId = conversationId,
                         content = assistantContent,
@@ -176,6 +212,7 @@ class ChatViewModel @Inject constructor(
                     )
                 )
                 conversationDao.updateLastMessageAt(conversationId, now)
+                translateMessage(messageId, assistantContent)
             }
 
             _uiState.update { it.copy(isLoading = false) }

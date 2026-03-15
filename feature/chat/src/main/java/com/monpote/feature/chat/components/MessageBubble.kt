@@ -1,5 +1,6 @@
 package com.monpote.feature.chat.components
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,7 +17,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monpote.core.model.Character
@@ -32,9 +36,11 @@ import java.util.Locale
 fun MessageBubble(
     message: Message,
     character: Character?,
+    onLongPress: (() -> Unit)? = null,
 ) {
     val isUser = message.role == Role.USER
     val maxWidth = (LocalConfiguration.current.screenWidthDp * 0.8).dp
+    val haptic = LocalHapticFeedback.current
 
     Row(
         modifier = Modifier
@@ -60,7 +66,20 @@ fun MessageBubble(
                 RoundedCornerShape(0.dp, 12.dp, 12.dp, 12.dp)
             },
             color = if (isUser) Primary else MaterialTheme.colorScheme.surface,
-            modifier = Modifier.widthIn(max = maxWidth),
+            modifier = Modifier
+                .widthIn(max = maxWidth)
+                .then(
+                    if (!isUser && onLongPress != null) {
+                        Modifier.pointerInput(Unit) {
+                            detectTapGestures(onLongPress = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onLongPress()
+                            })
+                        }
+                    } else {
+                        Modifier
+                    }
+                ),
         ) {
             Column(modifier = Modifier.padding(10.dp, 8.dp)) {
                 Text(
