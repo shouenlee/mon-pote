@@ -14,6 +14,7 @@ import com.monpote.core.network.BuildConfig
 import com.monpote.core.network.api.AzureOpenAiService
 import com.monpote.core.network.dto.ChatMessage
 import com.monpote.core.network.dto.ChatRequest
+import com.monpote.feature.correction.CorrectionService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,7 @@ class ChatViewModel @Inject constructor(
     private val conversationDao: ConversationDao,
     private val messageDao: MessageDao,
     private val openAiService: AzureOpenAiService,
+    private val correctionService: CorrectionService,
 ) : ViewModel() {
 
     private val characterId: String = checkNotNull(savedStateHandle["characterId"])
@@ -113,6 +115,31 @@ class ChatViewModel @Inject constructor(
             )
             onConversationCreated(newId)
         }
+    }
+
+    fun checkCorrection(text: String) {
+        if (text.isBlank()) return
+        if (_uiState.value.correctionState == CorrectionState.LOADING) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(correctionState = CorrectionState.LOADING, correctionResult = null) }
+
+            try {
+                val result = correctionService.check(text)
+                _uiState.update {
+                    it.copy(
+                        correctionState = CorrectionState.SUCCESS,
+                        correctionResult = result,
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(correctionState = CorrectionState.ERROR, correctionResult = null) }
+            }
+        }
+    }
+
+    fun dismissCorrection() {
+        _uiState.update { it.copy(correctionState = CorrectionState.IDLE, correctionResult = null) }
     }
 
     private suspend fun fetchAiResponse() {

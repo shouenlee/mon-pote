@@ -33,6 +33,7 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:model"))
     implementation(project(":core:ui"))
+    implementation(project(":feature:correction"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

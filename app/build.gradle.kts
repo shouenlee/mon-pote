@@ -48,6 +48,7 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":feature:onboarding"))
     implementation(project(":feature:chat"))
+    implementation(project(":feature:correction"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
