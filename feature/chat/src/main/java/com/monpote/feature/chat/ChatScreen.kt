@@ -3,6 +3,7 @@ package com.monpote.feature.chat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.monpote.core.ui.theme.ErrorRed
 import com.monpote.feature.chat.components.ChatInput
 import com.monpote.feature.chat.components.ChatTopBar
+import com.monpote.feature.chat.components.FeedbackPanel
 import com.monpote.feature.chat.components.MessageBubble
 import com.monpote.feature.chat.components.TypingIndicator
 
@@ -66,16 +68,36 @@ fun ChatScreen(
             }
         },
         bottomBar = {
-            ChatInput(
-                text = inputText,
-                onTextChange = { inputText = it },
-                onSend = {
-                    if (inputText.isNotBlank()) {
-                        viewModel.sendMessage(inputText)
-                        inputText = ""
-                    }
-                },
-            )
+            Column {
+                FeedbackPanel(
+                    correctionState = uiState.correctionState,
+                    correctionResult = uiState.correctionResult,
+                    onDismiss = { viewModel.dismissCorrection() },
+                )
+
+                ChatInput(
+                    text = inputText,
+                    onTextChange = { newText ->
+                        inputText = newText
+                        // Auto-dismiss corrections when user edits text (stale)
+                        if (uiState.correctionState != CorrectionState.IDLE) {
+                            viewModel.dismissCorrection()
+                        }
+                    },
+                    onSend = {
+                        if (inputText.isNotBlank()) {
+                            viewModel.sendMessage(inputText)
+                            viewModel.dismissCorrection()
+                            inputText = ""
+                        }
+                    },
+                    onLongPress = {
+                        if (inputText.isNotBlank()) {
+                            viewModel.checkCorrection(inputText)
+                        }
+                    },
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
