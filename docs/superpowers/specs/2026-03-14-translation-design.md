@@ -22,9 +22,13 @@ No new modules. All changes fit within existing modules.
 
 ### Modified files
 
+**`:core:model`**
+- `Message.kt` — add `translation: String?` field (default null)
+
 **`:core:database`**
 - `entity/MessageEntity.kt` — add `translation: String?` column
 - `dao/MessageDao.kt` — add `updateTranslation()` query
+- `mapper/EntityMappers.kt` — update `MessageEntity.toDomain()` and `Message.toEntity()` to map the translation field
 - `MonPoteDatabase.kt` — bump version to 2, add migration
 
 **`:feature:chat`**
@@ -36,7 +40,6 @@ No new modules. All changes fit within existing modules.
 
 ### Unchanged modules
 - `:core:network` — reuses existing `AzureOpenAiService`
-- `:core:model` — no changes needed
 - `:core:ui` — no changes needed
 - `:feature:onboarding` — no changes needed
 - `:feature:correction` — no changes needed
@@ -122,11 +125,11 @@ Default: `emptySet()`
 
 ### toggleTranslation(messageId: Long)
 
-Adds or removes the message ID from `visibleTranslations` set. Only works if the message has a non-null, non-empty translation.
+Adds or removes the message ID from `visibleTranslations` set. Works for any AI message regardless of translation state — if translation is still null (in-flight), the TranslationCard shows "Traduction..." loading text that auto-updates when the Room Flow emits the translated message.
 
 ### translateMessage(messageId: Long, content: String)
 
-Called after saving an AI message. Fires a background coroutine:
+Called after saving an AI message. The `messageId` is the return value of `messageDao.insert()` — the implementation must capture this ID (currently discarded in `fetchAiResponse()`). Fires a background coroutine:
 1. Call LLM with translation prompt + content
 2. Extract response content string
 3. Call `messageDao.updateTranslation(messageId, translation)`
