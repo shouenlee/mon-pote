@@ -11,7 +11,7 @@ interface AzureOpenAiService {
     @POST("openai/deployments/{deployment}/chat/completions")
     suspend fun chatCompletion(
         @Path("deployment") deployment: String,
-        @Query("api-version") apiVersion: String = "2024-08-01-preview",
+        @Query("api-version") apiVersion: String = "2024-05-01-preview",
         @Body request: ChatRequest,
     ): ChatResponse
 }
