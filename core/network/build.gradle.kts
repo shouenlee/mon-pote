@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+}
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        load(localPropertiesFile.inputStream())
+    }
 }
 
 android {
@@ -12,15 +21,9 @@ android {
     defaultConfig {
         minSdk = 26
 
-        val properties = java.util.Properties()
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            properties.load(localPropertiesFile.inputStream())
-        }
-
-        buildConfigField("String", "AZURE_OPENAI_ENDPOINT", "\"${properties.getProperty("azure.openai.endpoint", "")}\"")
-        buildConfigField("String", "AZURE_OPENAI_API_KEY", "\"${properties.getProperty("azure.openai.apikey", "")}\"")
-        buildConfigField("String", "AZURE_OPENAI_DEPLOYMENT", "\"${properties.getProperty("azure.openai.deployment", "")}\"")
+        buildConfigField("String", "AZURE_OPENAI_ENDPOINT", "\"${localProperties.getProperty("azure.openai.endpoint", "")}\"")
+        buildConfigField("String", "AZURE_OPENAI_API_KEY", "\"${localProperties.getProperty("azure.openai.apikey", "")}\"")
+        buildConfigField("String", "AZURE_OPENAI_DEPLOYMENT", "\"${localProperties.getProperty("azure.openai.deployment", "")}\"")
     }
 
     buildFeatures {
