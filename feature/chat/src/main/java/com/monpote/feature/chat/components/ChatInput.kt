@@ -2,7 +2,9 @@ package com.monpote.feature.chat.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,8 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -93,20 +93,20 @@ fun ChatInput(
             )
 
             if (text.isNotBlank()) {
-                FloatingActionButton(
-                    onClick = {
-                        checkPressed = true
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onLongPress()
-                    },
-                    shape = CircleShape,
-                    containerColor = if (isChecking) SuccessGreen.copy(alpha = 0.4f) else SuccessGreen,
-                    elevation = FloatingActionButtonDefaults.elevation(
-                        defaultElevation = 2.dp,
-                    ),
+                Box(
+                    contentAlignment = androidx.compose.ui.Alignment.Center,
                     modifier = Modifier
-                        .size(38.dp)
-                        .scale(checkScale),
+                        .size(42.dp)
+                        .scale(checkScale)
+                        .background(
+                            if (isChecking) SuccessGreen.copy(alpha = 0.4f) else SuccessGreen,
+                            CircleShape,
+                        )
+                        .clickable {
+                            checkPressed = true
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onLongPress()
+                        },
                 ) {
                     Text(text = "✓", color = Color.White, fontSize = 18.sp)
                 }
@@ -114,16 +114,17 @@ fun ChatInput(
                 Spacer(modifier = Modifier.width(6.dp))
             }
 
-            FloatingActionButton(
-                onClick = onSend,
-                shape = CircleShape,
-                containerColor = if (text.isNotBlank()) Primary else Primary.copy(alpha = 0.4f),
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 2.dp,
-                ),
-                modifier = Modifier.size(38.dp),
+            Box(
+                contentAlignment = androidx.compose.ui.Alignment.Center,
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(
+                        if (text.isNotBlank()) Primary else Primary.copy(alpha = 0.3f),
+                        CircleShape,
+                    )
+                    .clickable(onClick = onSend),
             ) {
-                Text(text = "➤", color = Color.White)
+                Text(text = "➤", color = Color.White, fontSize = 16.sp)
             }
         }
     }
