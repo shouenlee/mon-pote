@@ -136,7 +136,8 @@ class ChatViewModel @Inject constructor(
                 request = ChatRequest(messages = apiMessages),
             )
 
-            val assistantContent = response.choices.firstOrNull()?.message?.content
+            val msg = response.choices.firstOrNull()?.message
+            val assistantContent = msg?.content ?: msg?.reasoningContent
             if (assistantContent != null) {
                 val now = System.currentTimeMillis()
                 messageDao.insert(
