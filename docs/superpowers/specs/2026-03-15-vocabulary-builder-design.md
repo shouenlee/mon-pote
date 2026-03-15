@@ -33,7 +33,7 @@ The library screen and its ViewModel. Depends on `:core:database`, `:core:model`
 Double-tap gesture, word selection overlay, save flow.
 
 **Modified files:**
-- `ChatViewModel.kt` — add `saveWords()` method, LLM call for definitions
+- `ChatViewModel.kt` — add `SavedWordDao` constructor parameter, add `saveWords()` method, LLM call for definitions
 - `ChatScreen.kt` — add double-tap handler, word selection overlay state
 - `components/MessageBubble.kt` — add double-tap gesture (distinct from long-press)
 
@@ -84,6 +84,8 @@ New domain model.
 | reinforcementEnabled | Boolean | Default true. Toggle in library. |
 | savedAt | Long | Epoch millis |
 
+**Design decision:** No `messageId` or `conversationId` foreign key. Saved words are intentionally decoupled from their source conversation — they're a standalone vocabulary list. This keeps the data model simple and avoids orphaned references if conversations are deleted.
+
 ### Room Entity
 
 ```kotlin
@@ -122,6 +124,9 @@ interface SavedWordDao {
     @Query("SELECT * FROM saved_words WHERE word LIKE '%' || :query || '%' OR translation LIKE '%' || :query || '%'")
     fun searchWords(query: String): Flow<List<SavedWordEntity>>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM saved_words WHERE word = :word)")
+    suspend fun existsByWord(word: String): Boolean
+
     @Insert
     suspend fun insert(word: SavedWordEntity): Long
 
@@ -145,10 +150,9 @@ interface SavedWordDao {
 
 ### Double-Tap vs Long-Press Coexistence
 
-Both gestures live on the same AI bubble Surface via `pointerInput`:
-- `detectTapGestures(onDoubleTap = ..., onLongPress = ...)`
+Both gestures live on the same AI bubble Surface via `pointerInput` using `detectTapGestures(onDoubleTap = ..., onLongPress = ...)`.
 
-Compose's `detectTapGestures` supports both simultaneously — it waits a short period after the first tap to distinguish single-tap, double-tap, and long-press.
+**Known trade-off:** Adding `onDoubleTap` introduces a ~300ms delay on long-press because Compose must wait to determine if a first tap will become a double-tap. This is an accepted trade-off — the translation long-press will feel slightly slower but the delay is small enough to be acceptable. The pulse animation on double-tap provides immediate feedback that distinguishes it from a long-press attempt.
 
 ### Word Selection View
 
@@ -162,7 +166,8 @@ The expanded bubble contains:
 - The message text is split into individual words
 - Each word is a pill/chip with rounded corners (10dp), SurfaceVariant background
 - Pills flow in a wrap layout (FlowRow)
-- **Drag to select**: user touches a word and drags across adjacent words — all words in the drag path get selected as a single phrase
+- **Drag to select**: user touches a word and drags across adjacent words — all words in the drag path get selected as a single phrase. Dragging across row boundaries selects all words between start and end positions (inclusive), regardless of visual row wrapping. Each drag creates one phrase selection.
+- **Multiple selections**: user can perform multiple drags to create multiple independent phrase selections (e.g., drag "c'est ouf" then drag "le canal" = two separate saved entries)
 - Selected pills: Primary background with white text + small checkmark
 - Deselecting: tap a selected pill to deselect it. If it's part of a phrase, the entire phrase deselects.
 
@@ -180,11 +185,12 @@ When user taps "Sauvegarder":
 
 1. Overlay dismisses with reverse animation (shrink back to bubble)
 2. Surrounding messages fade back to 100%
-3. For each selected word/phrase, launch a background LLM call:
+3. Snackbar appears immediately: "N mot(s) sauvegardé(s) ✓" — this fires before LLM calls complete, as confirmation that the save was initiated
+4. For each selected word/phrase, launch LLM calls **sequentially** (one at a time, not parallel) to avoid rate limiting:
    - System prompt: "For the French word/phrase '{word}', provide a JSON with: english_translation, example_sentence (a short example in French using this word naturally). Respond ONLY with valid JSON."
    - Parse response, create SavedWordEntity, insert into Room
-4. Brief toast/snackbar: "N mot(s) sauvegardé(s)" with a green checkmark
-5. If LLM call fails for a word, save it with empty translation/example — user can see it in the library as incomplete
+   - If LLM call fails for a word, save it with `translation = ""` and `example = ""` — it appears in the library with a "Traduction en attente" placeholder
+5. **Duplicate handling:** Before saving, check if a word with the same `word` text already exists in `saved_words`. If it does, skip it (don't create a duplicate). The snackbar count reflects only newly saved words.
 
 ### LLM Request for Word Definition
 
