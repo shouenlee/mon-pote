@@ -233,4 +233,37 @@ enum class CorrectionState {
 
 ## ChatInput Changes
 
-The `ChatInput` composable gains an `onLongPress` callback parameter. The long-press gesture is detected using `pointerInput` with `detectTapGestures(onLongPress = ...)` on the input area container (not on the TextField itself, to avoid conflicting with text selection).
+The `ChatInput` composable gains an `onLongPress` callback parameter. To avoid conflicting with text selection on the TextField, the long-press is detected on the outer `Surface` composable that wraps the entire input bar. Apply `pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) }` on the `Surface` modifier. The `TextField` inside still handles its own touch events (text selection, cursor placement) because Compose pointer events are consumed by the innermost handler first — the `Surface` long-press only fires when the user long-presses on the non-TextField area (padding, send button area). For a reliable trigger, we also add a small "Vérifier" hint text that appears below the input field when text is non-empty, indicating "Long-press to check".
+
+## ChatScreen Layout Changes
+
+The existing `ChatScreen` uses `Scaffold` with `bottomBar = { ChatInput(...) }`. To accommodate the feedback panel between the message list and input, restructure the `bottomBar` to be a `Column` containing:
+1. `FeedbackPanel` (conditionally shown based on `correctionState`)
+2. `ChatInput`
+
+This keeps the Scaffold structure intact while allowing the panel to push the message list up naturally.
+
+## CorrectionService Dependencies
+
+`CorrectionService` is a Hilt `@Singleton` that takes two constructor parameters:
+- `AzureOpenAiService` — to make the LLM API call
+- `Moshi` — to parse the JSON response string into `CorrectionResult`
+
+Both are already provided by `:core:network`'s `NetworkModule`. The `CorrectionModule` Hilt module does not need to provide these — they are injected automatically via Hilt's dependency graph.
+
+The `CorrectionResult` and `CorrectionError` classes use `@JsonClass(generateAdapter = true)` for Moshi codegen, consistent with existing DTOs. The `:feature:correction` module's `build.gradle.kts` must include `ksp(libs.moshi.codegen)` and `implementation(libs.moshi)`.
+
+## Request Parameters
+
+The correction request uses `maxCompletionTokens = 512` (the existing default). This is sufficient for grammar correction of chat messages — even a message with 10+ errors produces well under 512 tokens of JSON. The correction prompt produces compact JSON output, not prose.
+
+## Edge Cases
+
+### Rapid successive long-presses
+If the user long-presses while a correction is already in-flight (`correctionState == LOADING`), the new request is **ignored**. The ViewModel's `checkCorrection()` method returns early if state is already LOADING. This prevents concurrent coroutines racing to update the same UI state.
+
+### Very long messages
+No special handling. The LLM handles long input naturally. If the message exceeds the model's context window (unlikely for chat messages), the API will return an error handled by the standard error path.
+
+### Messages with only emojis or numbers
+The LLM will return `{"errors": []}` — no corrections needed. Shows "Parfait !" banner.
