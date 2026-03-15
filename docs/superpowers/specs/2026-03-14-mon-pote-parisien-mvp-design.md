@@ -20,7 +20,7 @@ The MVP does **not** include: pre-send correction, vocabulary builder, error tra
 
 | Component | Choice |
 |-----------|--------|
-| Platform | Android (min SDK TBD) |
+| Platform | Android (min SDK 26 / Android 8.0) |
 | Language | Kotlin |
 | UI | Jetpack Compose (Material 3) |
 | IDE | Android Studio |
@@ -90,6 +90,11 @@ Predefined — seeded into Room on first launch via `RoomDatabase.Callback`. Not
 
 One conversation per chat session. Users can have multiple conversations with the same character.
 
+### Referential Integrity
+
+- Conversation → Character: `onDelete = NO_ACTION` (characters are predefined and never deleted)
+- Message → Conversation: `onDelete = CASCADE` (deleting a conversation removes its messages)
+
 ### Message
 | Field | Type | Notes |
 |-------|------|-------|
@@ -109,7 +114,7 @@ The message send/receive cycle:
 4. UI shows typing indicator (animated dots in an AI-style bubble)
 5. ViewModel builds the API request:
    - System message = `character.systemPrompt`
-   - Message history = last ~20 messages from Room (to keep token usage reasonable)
+   - Message history = last 20 messages from Room (to keep token usage reasonable)
    - User's new message appended
 6. POST to Azure OpenAI `chat/completions` endpoint
 7. Parse response, save assistant message to Room
@@ -118,6 +123,7 @@ The message send/receive cycle:
 ### Error Handling
 
 If the API call fails:
+- Typing indicator is dismissed
 - User message remains saved (not lost)
 - Inline error banner appears below the last user message: "Impossible d'envoyer. Réessayer?"
 - Tapping the banner retries the API call
@@ -125,7 +131,7 @@ If the API call fails:
 
 ### Conversation Context
 
-The system prompt defines the character's personality, language level, and behavioral rules. Approximately 20 most recent messages are sent as conversation history to maintain context without excessive token usage.
+The system prompt defines the character's personality, language level, and behavioral rules. The last 20 messages from the conversation are sent as history to maintain context without excessive token usage. If the conversation has fewer than 20 messages, all messages are sent.
 
 ## Screens
 
@@ -146,6 +152,7 @@ The first screen shown when no character has been selected.
 - Tapping a card saves `selectedCharacterId` to Preferences DataStore
 - Creates a new Conversation in Room for this character
 - Navigates to ChatScreen
+- The AI character sends an opening message automatically (e.g., "Salut ! Moi c'est Lucas, je suis graphiste à Belleville. Et toi, tu fais quoi dans la vie ?")
 
 **Character colors:**
 - Lucas: purple (#7B68EE)
@@ -157,7 +164,7 @@ The first screen shown when no character has been selected.
 The main screen of the app — a WhatsApp/iMessage-style messaging interface.
 
 **Components:**
-- **ChatTopBar** — character avatar (colored circle with initial), name, location. Menu overflow for settings/new chat.
+- **ChatTopBar** — character avatar (colored circle with initial), name, location. Overflow menu with: "Nouveau chat" (creates a new Conversation for the same character and navigates to it) and "Changer de pote" (navigates back to the onboarding/character selection screen, clears `selectedCharacterId` from DataStore).
 - **Message list** — `LazyColumn` of `MessageBubble` composables. AI messages on the left with avatar, user messages on the right. Rounded bubble corners. Timestamps below each message. Auto-scrolls to bottom on new messages.
 - **TypingIndicator** — animated dots in an AI-style bubble, shown while waiting for API response.
 - **ChatInput** — rounded text field + circular send button. Send button only active when text is non-empty.
@@ -203,11 +210,16 @@ Body:
     {"role": "system", "content": "{character.systemPrompt}"},
     {"role": "user", "content": "..."},
     {"role": "assistant", "content": "..."},
-    ...last ~20 messages...
+    ...last 20 messages...
     {"role": "user", "content": "{new message}"}
   ]
 }
 ```
+
+### Generation Parameters
+
+- `temperature`: 0.9 (high creativity for natural, varied conversation)
+- `max_tokens`: 300 (keeps responses concise and chat-like, avoids essay-length replies)
 
 ### Network Layer
 
@@ -227,7 +239,7 @@ Each character has a detailed system prompt that defines:
 
 System prompts are stored in the Room database as part of the Character entity, seeded on first launch.
 
-## Future Extensibility
+## Future Extensibility (Not in scope — context only)
 
 The multi-module architecture is designed to accommodate post-MVP features as new modules:
 - **`:feature:correction`** — pre-send grammar checking (the "Vérifier" system)
