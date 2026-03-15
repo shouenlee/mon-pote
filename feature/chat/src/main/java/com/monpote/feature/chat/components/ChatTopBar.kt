@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -27,7 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monpote.core.model.Character
 import com.monpote.core.ui.components.CharacterAvatar
-import com.monpote.core.ui.theme.TextSecondary
+import com.monpote.core.ui.theme.TextFaint
+import com.monpote.core.ui.theme.TextMuted
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +46,8 @@ fun ChatTopBar(
                 CharacterAvatar(
                     initial = character.name.first(),
                     color = Color(character.color),
-                    size = 36.dp,
+                    characterId = character.id,
+                    size = 38.dp,
                     fontSize = 16.sp,
                 )
 
@@ -57,7 +60,7 @@ fun ChatTopBar(
                     )
                     Text(
                         text = character.location,
-                        style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary),
+                        style = MaterialTheme.typography.labelSmall.copy(color = TextMuted),
                     )
                 }
             }
@@ -67,7 +70,7 @@ fun ChatTopBar(
                 Icon(
                     imageVector = Icons.Default.MoreVert,
                     contentDescription = "Menu",
-                    tint = TextSecondary,
+                    tint = TextFaint,
                 )
             }
             DropdownMenu(

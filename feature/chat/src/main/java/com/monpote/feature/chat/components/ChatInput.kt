@@ -16,7 +16,6 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -32,7 +31,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.monpote.core.ui.theme.OnSurface
 import com.monpote.core.ui.theme.Primary
+import com.monpote.core.ui.theme.SuccessGreen
 import com.monpote.core.ui.theme.SurfaceVariant
 import com.monpote.core.ui.theme.TextMuted
 
@@ -56,77 +57,73 @@ fun ChatInput(
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp,
         modifier = modifier,
     ) {
-        Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-            ) {
-                TextField(
-                    value = text,
-                    onValueChange = onTextChange,
-                    placeholder = {
-                        Text(
-                            text = "Écrire un message...",
-                            color = TextMuted,
-                        )
-                    },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = SurfaceVariant,
-                        unfocusedContainerColor = SurfaceVariant,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                    ),
-                    shape = RoundedCornerShape(20.dp),
-                    singleLine = false,
-                    maxLines = 4,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                )
-
-                // Vérifier button (visible when text is non-empty)
-                if (text.isNotBlank()) {
-                    FloatingActionButton(
-                        onClick = {
-                            checkPressed = true
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onLongPress()
-                        },
-                        shape = CircleShape,
-                        containerColor = if (isChecking) Primary.copy(alpha = 0.4f) else Color(0xFF2ECC71),
-                        elevation = FloatingActionButtonDefaults.elevation(0.dp),
-                        modifier = Modifier
-                            .size(38.dp)
-                            .scale(checkScale),
-                    ) {
-                        Text(
-                            text = "✓",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-
-                FloatingActionButton(
-                    onClick = onSend,
-                    shape = CircleShape,
-                    containerColor = if (text.isNotBlank()) Primary else Primary.copy(alpha = 0.4f),
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
-                    modifier = Modifier.size(38.dp),
-                ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+        ) {
+            TextField(
+                value = text,
+                onValueChange = onTextChange,
+                placeholder = {
                     Text(
-                        text = "➤",
-                        color = Color.White,
+                        text = "Écrire un message...",
+                        color = TextMuted,
                     )
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = SurfaceVariant,
+                    unfocusedContainerColor = SurfaceVariant,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedTextColor = OnSurface,
+                    unfocusedTextColor = OnSurface,
+                    cursorColor = Primary,
+                ),
+                shape = RoundedCornerShape(22.dp),
+                singleLine = false,
+                maxLines = 4,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+            )
+
+            if (text.isNotBlank()) {
+                FloatingActionButton(
+                    onClick = {
+                        checkPressed = true
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLongPress()
+                    },
+                    shape = CircleShape,
+                    containerColor = if (isChecking) SuccessGreen.copy(alpha = 0.4f) else SuccessGreen,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 2.dp,
+                    ),
+                    modifier = Modifier
+                        .size(38.dp)
+                        .scale(checkScale),
+                ) {
+                    Text(text = "✓", color = Color.White, fontSize = 18.sp)
                 }
+
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+
+            FloatingActionButton(
+                onClick = onSend,
+                shape = CircleShape,
+                containerColor = if (text.isNotBlank()) Primary else Primary.copy(alpha = 0.4f),
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 2.dp,
+                ),
+                modifier = Modifier.size(38.dp),
+            ) {
+                Text(text = "➤", color = Color.White)
             }
         }
     }

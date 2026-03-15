@@ -1,33 +1,36 @@
 package com.monpote.feature.chat.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.monpote.core.model.Character
 import com.monpote.core.model.Message
 import com.monpote.core.model.Role
-import com.monpote.core.ui.components.CharacterAvatar
 import com.monpote.core.ui.theme.Primary
+import com.monpote.core.ui.theme.TextMuted
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,65 +44,62 @@ fun MessageBubble(
     val isUser = message.role == Role.USER
     val maxWidth = (LocalConfiguration.current.screenWidthDp * 0.8).dp
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    val scale = remember { Animatable(1f) }
 
-    Row(
+    Column(
+        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Bottom,
+            .padding(horizontal = 16.dp, vertical = 3.dp),
     ) {
-        if (!isUser && character != null) {
-            CharacterAvatar(
-                initial = character.name.first(),
-                color = Color(character.color),
-                size = 28.dp,
-                fontSize = 12.sp,
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-
         Surface(
             shape = if (isUser) {
-                RoundedCornerShape(12.dp, 0.dp, 12.dp, 12.dp)
+                RoundedCornerShape(18.dp, 4.dp, 18.dp, 18.dp)
             } else {
-                RoundedCornerShape(0.dp, 12.dp, 12.dp, 12.dp)
+                RoundedCornerShape(4.dp, 18.dp, 18.dp, 18.dp)
             },
             color = if (isUser) Primary else MaterialTheme.colorScheme.surface,
+            shadowElevation = if (isUser) 0.dp else 1.dp,
             modifier = Modifier
                 .widthIn(max = maxWidth)
+                .scale(scale.value)
                 .then(
                     if (!isUser && onLongPress != null) {
                         Modifier.pointerInput(Unit) {
                             detectTapGestures(onLongPress = {
+                                scope.launch {
+                                    // Single bounce: squish → overshoot → settle
+                                    scale.animateTo(0.96f, animationSpec = tween(80))
+                                    scale.animateTo(1.02f, animationSpec = tween(100))
+                                    scale.animateTo(1f, animationSpec = tween(80))
+                                }
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onLongPress()
                             })
                         }
-                    } else {
-                        Modifier
-                    }
+                    } else Modifier
                 ),
         ) {
-            Column(modifier = Modifier.padding(10.dp, 8.dp)) {
-                Text(
-                    text = message.content,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
-
-                Text(
-                    text = formatTimestamp(message.timestamp),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = if (isUser) Color.White.copy(alpha = 0.5f) else Color.Gray,
-                    ),
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(top = 4.dp),
-                )
-            }
+            Text(
+                text = message.content,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = if (isUser) Color.White else MaterialTheme.colorScheme.onSurface,
+                ),
+                modifier = Modifier.padding(12.dp, 10.dp),
+            )
         }
+
+        // Timestamp outside bubble
+        Text(
+            text = formatTimestamp(message.timestamp),
+            style = MaterialTheme.typography.labelSmall.copy(color = TextMuted),
+            modifier = Modifier.padding(
+                start = if (!isUser) 4.dp else 0.dp,
+                end = if (isUser) 4.dp else 0.dp,
+                top = 2.dp,
+            ),
+        )
     }
 }
 

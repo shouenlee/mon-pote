@@ -1,6 +1,8 @@
 package com.monpote.feature.chat.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,15 +37,17 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.monpote.core.ui.theme.ErrorRed
+import com.monpote.core.ui.theme.GrammarOrange
 import com.monpote.core.ui.theme.Primary
+import com.monpote.core.ui.theme.SuccessGreen
 import com.monpote.core.ui.theme.SurfaceVariant
+import com.monpote.core.ui.theme.TextFaint
+import com.monpote.core.ui.theme.TextMuted
+import com.monpote.core.ui.theme.TextSecondary
 import com.monpote.feature.chat.CorrectionState
 import com.monpote.feature.correction.CorrectionError
 import com.monpote.feature.correction.CorrectionResult
 import kotlinx.coroutines.delay
-
-private val GrammarOrange = Color(0xFFE67E22)
-private val SuccessGreen = Color(0xFF2ECC71)
 
 @Composable
 fun FeedbackPanel(
@@ -52,8 +57,12 @@ fun FeedbackPanel(
 ) {
     AnimatedVisibility(
         visible = correctionState != CorrectionState.IDLE,
-        enter = expandVertically(),
-        exit = shrinkVertically(),
+        enter = expandVertically(
+            animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+        ),
+        exit = shrinkVertically(
+            animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+        ),
     ) {
         when (correctionState) {
             CorrectionState.LOADING -> LoadingBanner()
@@ -61,10 +70,7 @@ fun FeedbackPanel(
                 if (correctionResult == null || correctionResult.errors.isEmpty()) {
                     SuccessBanner(onDismiss = onDismiss)
                 } else {
-                    ErrorPanel(
-                        errors = correctionResult.errors,
-                        onDismiss = onDismiss,
-                    )
+                    ErrorPanel(errors = correctionResult.errors, onDismiss = onDismiss)
                 }
             }
             CorrectionState.ERROR -> ErrorBanner(onDismiss = onDismiss)
@@ -84,15 +90,11 @@ private fun LoadingBanner() {
             .padding(12.dp, 10.dp),
     ) {
         CircularProgressIndicator(
-            color = Color.Gray,
+            color = TextMuted,
             strokeWidth = 2.dp,
             modifier = Modifier.size(14.dp),
         )
-        Text(
-            text = "Vérification en cours...",
-            color = Color.Gray,
-            fontSize = 13.sp,
-        )
+        Text(text = "Vérification en cours...", color = TextMuted, fontSize = 13.sp)
     }
 }
 
@@ -108,21 +110,12 @@ private fun SuccessBanner(onDismiss: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .background(SuccessGreen.copy(alpha = 0.13f))
+            .background(SuccessGreen.copy(alpha = 0.08f))
             .padding(12.dp, 10.dp),
     ) {
         Text(text = "✓", color = SuccessGreen, fontSize = 16.sp)
-        Text(
-            text = "Parfait !",
-            color = SuccessGreen,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            text = "Aucune erreur détectée",
-            color = SuccessGreen.copy(alpha = 0.7f),
-            fontSize = 12.sp,
-        )
+        Text(text = "Parfait !", color = SuccessGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(text = "Aucune erreur détectée", color = SuccessGreen.copy(alpha = 0.7f), fontSize = 12.sp)
     }
 }
 
@@ -133,16 +126,12 @@ private fun ErrorBanner(onDismiss: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .background(ErrorRed.copy(alpha = 0.13f))
+            .background(ErrorRed.copy(alpha = 0.08f))
             .clickable(onClick = onDismiss)
             .padding(12.dp, 10.dp),
     ) {
         Text(text = "✕", color = ErrorRed, fontSize = 13.sp)
-        Text(
-            text = "Vérification indisponible",
-            color = ErrorRed,
-            fontSize = 12.sp,
-        )
+        Text(text = "Vérification indisponible", color = ErrorRed, fontSize = 12.sp)
     }
 }
 
@@ -151,54 +140,71 @@ private fun ErrorPanel(
     errors: List<CorrectionError>,
     onDismiss: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
-            .background(MaterialTheme.colorScheme.surface),
+    Surface(
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surface,
     ) {
-        // Red top border
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(2.dp)
-                .background(ErrorRed),
-        )
+        Column {
+            // Drag handle
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp, bottom = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(36.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(TextFaint),
+                )
+            }
 
-        // Header
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-        ) {
-            Text(text = "⚠", color = ErrorRed, fontSize = 14.sp)
-            Text(
-                text = " ${errors.size} correction${if (errors.size > 1) "s" else ""}",
-                color = Color.White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = "✕",
-                color = Color.Gray,
-                fontSize = 18.sp,
-                modifier = Modifier.clickable(onClick = onDismiss),
-            )
-        }
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(ErrorRed.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = "!", color = ErrorRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
 
-        // Error cards
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .heightIn(max = 220.dp)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 12.dp),
-        ) {
-            errors.forEach { error ->
-                ErrorCard(error = error)
+                Text(
+                    text = " ${errors.size} correction${if (errors.size > 1) "s" else ""}",
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+
+                Text(
+                    text = "✕",
+                    color = TextFaint,
+                    fontSize = 16.sp,
+                    modifier = Modifier.clickable(onClick = onDismiss),
+                )
+            }
+
+            // Error cards
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
+            ) {
+                errors.forEach { error -> ErrorCard(error = error) }
             }
         }
     }
@@ -210,58 +216,46 @@ private fun ErrorCard(error: CorrectionError) {
         "orthographe" -> ErrorRed
         "grammaire" -> GrammarOrange
         "style" -> Primary
-        else -> Color.Gray
+        else -> TextMuted
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(8.dp))
-            .background(SurfaceVariant),
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.background),
     ) {
-        // Left color border
         Box(
             modifier = Modifier
                 .width(3.dp)
                 .fillMaxHeight()
+                .clip(RoundedCornerShape(2.dp))
                 .background(borderColor),
         )
 
-        Column(modifier = Modifier.padding(10.dp, 8.dp)) {
+        Column(modifier = Modifier.padding(12.dp, 10.dp)) {
             Text(
                 text = error.type.replaceFirstChar { it.uppercase() },
                 color = borderColor,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
             )
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 4.dp),
             ) {
-                Text(
-                    text = error.original,
-                    color = Color.Gray,
-                    fontSize = 13.sp,
-                    textDecoration = TextDecoration.LineThrough,
-                )
-                Text(
-                    text = " → ",
-                    color = Color.Gray,
-                    fontSize = 13.sp,
-                )
-                Text(
-                    text = error.correction,
-                    color = SuccessGreen,
-                    fontSize = 13.sp,
-                )
+                Text(text = error.original, color = TextMuted, fontSize = 13.sp, textDecoration = TextDecoration.LineThrough)
+                Text(text = " → ", color = TextFaint, fontSize = 13.sp)
+                Text(text = error.correction, color = SuccessGreen, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
 
             Text(
                 text = error.explanation,
-                color = Color.Gray,
+                color = TextSecondary,
                 fontSize = 11.sp,
+                lineHeight = 15.sp,
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
