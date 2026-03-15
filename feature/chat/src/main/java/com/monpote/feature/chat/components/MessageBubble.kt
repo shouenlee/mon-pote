@@ -3,6 +3,7 @@ package com.monpote.feature.chat.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -60,9 +61,18 @@ fun MessageBubble(
                 RoundedCornerShape(4.dp, 18.dp, 18.dp, 18.dp)
             },
             color = if (isUser) Primary else MaterialTheme.colorScheme.surface,
-            shadowElevation = if (isUser) 0.dp else 1.dp,
+            shadowElevation = if (isUser) 0.dp else 2.dp,
             modifier = Modifier
                 .widthIn(max = maxWidth)
+                .then(
+                    if (!isUser) {
+                        Modifier.border(
+                            width = 0.5.dp,
+                            color = Color(0xFFE8E8E8),
+                            shape = RoundedCornerShape(4.dp, 18.dp, 18.dp, 18.dp),
+                        )
+                    } else Modifier
+                )
                 .scale(scale.value)
                 .then(
                     if (!isUser && onLongPress != null) {

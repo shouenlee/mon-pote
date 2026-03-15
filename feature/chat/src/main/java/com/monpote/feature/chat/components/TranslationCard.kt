@@ -47,7 +47,7 @@ fun TranslationCard(
         Row(
             verticalAlignment = Alignment.Top,
             modifier = Modifier
-                .padding(start = 24.dp, end = 32.dp, top = 0.dp, bottom = 4.dp)
+                .padding(start = 24.dp, end = 60.dp, top = 0.dp, bottom = 4.dp)
                 .clip(RoundedCornerShape(0.dp, 0.dp, 12.dp, 12.dp))
                 .background(SurfaceTint)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
