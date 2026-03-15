@@ -8,22 +8,22 @@ import androidx.compose.ui.unit.sp
 val MonPoteTypography = Typography(
     headlineLarge = TextStyle(
         fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        color = TextPrimary,
+        fontSize = 24.sp,
+        color = OnBackground,
     ),
     titleMedium = TextStyle(
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
-        color = TextPrimary,
+        color = OnBackground,
     ),
     bodyLarge = TextStyle(
         fontSize = 14.sp,
-        color = TextPrimary,
+        color = OnSurface,
         lineHeight = 20.sp,
     ),
     bodyMedium = TextStyle(
         fontSize = 13.sp,
-        color = TextPrimary,
+        color = OnSurface,
         lineHeight = 19.sp,
     ),
     bodySmall = TextStyle(

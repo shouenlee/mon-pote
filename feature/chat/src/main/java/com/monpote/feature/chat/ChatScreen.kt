@@ -127,7 +127,7 @@ fun ChatScreen(
 
             if (uiState.isLoading) {
                 item {
-                    TypingIndicator(character = uiState.character)
+                    TypingIndicator()
                 }
             }
 
