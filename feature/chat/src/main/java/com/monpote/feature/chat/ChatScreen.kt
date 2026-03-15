@@ -77,6 +77,7 @@ fun ChatScreen(
 
                 ChatInput(
                     text = inputText,
+                    isChecking = uiState.correctionState == CorrectionState.LOADING,
                     onTextChange = { newText ->
                         inputText = newText
                         // Auto-dismiss corrections when user edits text (stale)
