@@ -26,11 +26,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.monpote.core.model.Role
 import com.monpote.core.ui.theme.ErrorRed
 import com.monpote.feature.chat.components.ChatInput
 import com.monpote.feature.chat.components.ChatTopBar
 import com.monpote.feature.chat.components.FeedbackPanel
 import com.monpote.feature.chat.components.MessageBubble
+import com.monpote.feature.chat.components.TranslationCard
 import com.monpote.feature.chat.components.TypingIndicator
 
 @Composable
@@ -105,10 +107,22 @@ fun ChatScreen(
                 .padding(padding),
         ) {
             items(uiState.messages, key = { it.id }) { message ->
-                MessageBubble(
-                    message = message,
-                    character = uiState.character,
-                )
+                Column {
+                    MessageBubble(
+                        message = message,
+                        character = uiState.character,
+                        onLongPress = if (message.role == Role.ASSISTANT) {
+                            { viewModel.toggleTranslation(message.id) }
+                        } else null,
+                    )
+
+                    if (message.role == Role.ASSISTANT) {
+                        TranslationCard(
+                            translation = message.translation,
+                            visible = message.id in uiState.visibleTranslations,
+                        )
+                    }
+                }
             }
 
             if (uiState.isLoading) {
