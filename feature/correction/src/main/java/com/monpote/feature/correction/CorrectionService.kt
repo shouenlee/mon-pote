@@ -42,10 +42,12 @@ IMPORTANT : Réponds UNIQUEMENT avec le JSON valide, sans texte avant ou après.
                     ChatMessage(role = "system", content = SYSTEM_PROMPT),
                     ChatMessage(role = "user", content = text),
                 ),
+                maxCompletionTokens = 4096,
             ),
         )
 
         val jsonString = response.choices.firstOrNull()?.message?.content
+            ?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("No content in response")
 
         // Strip markdown code fences if LLM wraps JSON in ```json ... ```
