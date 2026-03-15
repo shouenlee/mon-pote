@@ -43,6 +43,17 @@ This spec does **not** cover: new features, data model changes, or API changes. 
 | LucasGradient | #7B68EE → #A78BFA | Lucas avatar/tag |
 | SarahGradient | #F97316 → #FB923C | Sarah avatar/tag |
 | KarimGradient | #059669 → #34D399 | Karim avatar/tag |
+| InputText | #333333 | Text typed in input field (same as OnSurface) |
+| DateDividerText | #999999 | Date divider pill text |
+
+### Character Gradients
+
+Gradients are hardcoded in the UI layer by character ID (not in the data model — no schema changes). The `CharacterAvatar` composable maps `character.id` to a `Brush.linearGradient`:
+- `"lucas"` → `listOf(Color(0xFF7B68EE), Color(0xFFA78BFA))`
+- `"sarah"` → `listOf(Color(0xFFF97316), Color(0xFFFB923C))`
+- `"karim"` → `listOf(Color(0xFF059669), Color(0xFF34D399))`
+
+Fallback: if ID doesn't match, use `character.color` as a flat fill (backward compatible).
 
 ### Typography
 
@@ -56,7 +67,7 @@ Same font sizes as current, but text colors change from light-on-dark to dark-on
 
 - Message bubbles: 18dp corners (AI: 4dp top-left, User: 4dp top-right)
 - Cards: 20dp corners
-- Avatars: 16dp corners (squircle, not circle)
+- Avatars: 16dp corners (squircle, not circle) — all sizes
 - Input field: 22dp corners (pill shape)
 - Buttons: 50% corners (circle)
 - Tag pills: 10dp corners
@@ -73,7 +84,7 @@ Same font sizes as current, but text colors change from light-on-dark to dark-on
 
 ## Animations
 
-All animations use spring physics from Material 3 Expressive. No duration-based easing.
+Layout animations (appear, expand, collapse) use spring physics. Gesture feedback animations (bounce, hold indicator) use short fixed durations since they need precise timing tied to user input.
 
 ### Message Appear
 
@@ -131,7 +142,7 @@ Existing bouncing dots animation remains but uses spring physics instead of twee
 **Top bar:**
 - White (#FFF) background with subtle bottom divider (1px #F0F0F0)
 - Back arrow (Parisian Blue)
-- Squircle avatar (38dp, 14dp corners) with character gradient
+- Squircle avatar (38dp, 16dp corners) with character gradient
 - Character name (14sp, 600 weight, #1A1A1A)
 - Location subtitle (11sp, #AAAAAA)
 - Overflow menu icon (#CCCCCC)
@@ -141,11 +152,11 @@ Existing bouncing dots animation remains but uses spring physics instead of twee
 - Date dividers: centered pill, #F0EDE8 background, #999 text, 10dp corners
 - AI bubbles: #FFF background, shadow, 4dp/18dp corners, text in #333
 - User bubbles: #2563EB background, no shadow, 18dp/4dp corners, text in #FFF
-- Timestamps: outside bubbles, below, 10sp, #C0C0C0
-- No avatars in message list (cleaner — avatar is in top bar)
+- Timestamps: outside bubbles, below. Left-aligned under AI bubbles, right-aligned under user bubbles. 10sp, TextMuted (#AAAAAA). Horizontal padding matches bubble edge (4dp indent).
+- No avatars in message list (cleaner — avatar is in top bar). This includes the typing indicator — remove its inline avatar too.
 
 **Translation drawer:**
-- #EBE5DB background (warm beige)
+- #F0EDE8 background (warm beige)
 - Narrower than bubble: inset 8dp each side
 - 0dp top corners, 12dp bottom corners
 - "EN" label: Parisian Blue, 9sp, bold
@@ -217,6 +228,7 @@ All changes are in existing files — no new modules.
 - `components/CharacterAvatar.kt` — change from circle to squircle (RoundedCornerShape 16dp)
 
 **`:feature:chat`**
+- `ChatUiState.kt` — no changes needed. The hold indicator progress is local composable state within `MessageBubble` (not ViewModel state), since it's purely visual feedback for a single gesture.
 - `components/MessageBubble.kt` — light theme colors, timestamps outside, remove inline avatar, add long-press hold indicator + bounce animation
 - `components/TranslationCard.kt` — narrower width, warm beige color, tucked under bubble
 - `components/ChatInput.kt` — light theme colors, updated button colors/shadows
