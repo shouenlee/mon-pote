@@ -31,9 +31,11 @@ fun Conversation.toEntity() = ConversationEntity(
 fun MessageEntity.toDomain() = Message(
     id = id, conversationId = conversationId, content = content,
     role = Role.entries.first { it.value == role }, timestamp = timestamp,
+    translation = translation,
 )
 
 fun Message.toEntity() = MessageEntity(
     id = id, conversationId = conversationId, content = content,
     role = role.value, timestamp = timestamp,
+    translation = translation,
 )

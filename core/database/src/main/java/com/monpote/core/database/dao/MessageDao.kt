@@ -16,4 +16,7 @@ interface MessageDao {
 
     @Insert
     suspend fun insert(message: MessageEntity): Long
+
+    @Query("UPDATE messages SET translation = :translation WHERE id = :messageId")
+    suspend fun updateTranslation(messageId: Long, translation: String)
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.monpote.core.database.MIGRATION_1_2
 import com.monpote.core.database.MonPoteDatabase
 import com.monpote.core.database.dao.CharacterDao
 import com.monpote.core.database.dao.ConversationDao
@@ -32,6 +33,7 @@ object DatabaseModule {
             MonPoteDatabase::class.java,
             "monpote.db",
         )
+            .addMigrations(MIGRATION_1_2)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
