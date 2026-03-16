@@ -3,10 +3,12 @@ package com.monpote.core.database.mapper
 import com.monpote.core.database.entity.CharacterEntity
 import com.monpote.core.database.entity.ConversationEntity
 import com.monpote.core.database.entity.MessageEntity
+import com.monpote.core.database.entity.SavedWordEntity
 import com.monpote.core.model.Character
 import com.monpote.core.model.Conversation
 import com.monpote.core.model.Message
 import com.monpote.core.model.Role
+import com.monpote.core.model.SavedWord
 
 fun CharacterEntity.toDomain() = Character(
     id = id, name = name, tag = tag, description = description,
@@ -38,4 +40,16 @@ fun Message.toEntity() = MessageEntity(
     id = id, conversationId = conversationId, content = content,
     role = role.value, timestamp = timestamp,
     translation = translation,
+)
+
+fun SavedWordEntity.toDomain() = SavedWord(
+    id = id, word = word, translation = translation,
+    example = example, reinforcementEnabled = reinforcementEnabled,
+    savedAt = savedAt,
+)
+
+fun SavedWord.toEntity() = SavedWordEntity(
+    id = id, word = word, translation = translation,
+    example = example, reinforcementEnabled = reinforcementEnabled,
+    savedAt = savedAt,
 )
