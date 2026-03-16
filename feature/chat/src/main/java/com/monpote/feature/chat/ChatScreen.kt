@@ -34,11 +34,13 @@ import com.monpote.feature.chat.components.FeedbackPanel
 import com.monpote.feature.chat.components.MessageBubble
 import com.monpote.feature.chat.components.TranslationCard
 import com.monpote.feature.chat.components.TypingIndicator
+import com.monpote.feature.chat.components.WordSelectionOverlay
 
 @Composable
 fun ChatScreen(
     onNavigateToOnboarding: () -> Unit,
     onNewConversation: (characterId: String, conversationId: Long) -> Unit,
+    onNavigateToVocabulary: () -> Unit = {},
     viewModel: ChatViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -66,6 +68,7 @@ fun ChatScreen(
                         }
                     },
                     onChangeCharacter = onNavigateToOnboarding,
+                    onNavigateToVocabulary = onNavigateToVocabulary,
                 )
             }
         },
@@ -108,15 +111,27 @@ fun ChatScreen(
         ) {
             items(uiState.messages, key = { it.id }) { message ->
                 Column {
-                    MessageBubble(
-                        message = message,
-                        character = uiState.character,
-                        onLongPress = if (message.role == Role.ASSISTANT) {
-                            { viewModel.toggleTranslation(message.id) }
-                        } else null,
-                    )
+                    if (message.role == Role.ASSISTANT && uiState.wordSelectionMessageId == message.id) {
+                        // Word selection mode
+                        WordSelectionOverlay(
+                            messageContent = message.content,
+                            onSave = { phrases -> viewModel.saveWords(phrases) },
+                            onDismiss = { viewModel.exitWordSelection() },
+                        )
+                    } else {
+                        MessageBubble(
+                            message = message,
+                            character = uiState.character,
+                            onLongPress = if (message.role == Role.ASSISTANT) {
+                                { viewModel.toggleTranslation(message.id) }
+                            } else null,
+                            onDoubleTap = if (message.role == Role.ASSISTANT) {
+                                { viewModel.enterWordSelection(message.id) }
+                            } else null,
+                        )
+                    }
 
-                    if (message.role == Role.ASSISTANT) {
+                    if (message.role == Role.ASSISTANT && uiState.wordSelectionMessageId != message.id) {
                         TranslationCard(
                             translation = message.translation,
                             visible = message.id in uiState.visibleTranslations,

@@ -37,6 +37,7 @@ fun ChatTopBar(
     character: Character,
     onNewChat: () -> Unit,
     onChangeCharacter: () -> Unit,
+    onNavigateToVocabulary: () -> Unit = {},
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -89,6 +90,13 @@ fun ChatTopBar(
                     onClick = {
                         menuExpanded = false
                         onChangeCharacter()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("Mes mots") },
+                    onClick = {
+                        menuExpanded = false
+                        onNavigateToVocabulary()
                     },
                 )
             }

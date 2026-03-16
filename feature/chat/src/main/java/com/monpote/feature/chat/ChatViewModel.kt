@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.monpote.core.database.dao.CharacterDao
 import com.monpote.core.database.dao.ConversationDao
 import com.monpote.core.database.dao.MessageDao
+import com.monpote.core.database.dao.SavedWordDao
 import com.monpote.core.database.entity.ConversationEntity
 import com.monpote.core.database.entity.MessageEntity
+import com.monpote.core.database.entity.SavedWordEntity
 import com.monpote.core.database.mapper.toDomain
 import com.monpote.core.model.Role
 import com.monpote.core.network.BuildConfig
@@ -31,6 +33,7 @@ class ChatViewModel @Inject constructor(
     private val messageDao: MessageDao,
     private val openAiService: AzureOpenAiService,
     private val correctionService: CorrectionService,
+    private val savedWordDao: SavedWordDao,
 ) : ViewModel() {
 
     private val characterId: String = checkNotNull(savedStateHandle["characterId"])
@@ -140,6 +143,84 @@ class ChatViewModel @Inject constructor(
 
     fun dismissCorrection() {
         _uiState.update { it.copy(correctionState = CorrectionState.IDLE, correctionResult = null) }
+    }
+
+    fun enterWordSelection(messageId: Long) {
+        _uiState.update { it.copy(wordSelectionMessageId = messageId) }
+    }
+
+    fun exitWordSelection() {
+        _uiState.update { it.copy(wordSelectionMessageId = null) }
+    }
+
+    fun saveWords(phrases: List<String>) {
+        _uiState.update { it.copy(wordSelectionMessageId = null) }
+
+        viewModelScope.launch {
+            var savedCount = 0
+            for (phrase in phrases) {
+                if (savedWordDao.existsByWord(phrase)) continue
+
+                try {
+                    val response = openAiService.chatCompletion(
+                        deployment = BuildConfig.AZURE_OPENAI_DEPLOYMENT,
+                        request = ChatRequest(
+                            messages = listOf(
+                                ChatMessage(
+                                    role = "system",
+                                    content = "For the given French word or phrase, return a JSON object with:\n- \"translation\": English translation\n- \"example\": A short example sentence in French using this word naturally\n\nRespond ONLY with valid JSON, nothing else.",
+                                ),
+                                ChatMessage(role = "user", content = phrase),
+                            ),
+                            maxCompletionTokens = 4096,
+                        ),
+                    )
+
+                    val jsonString = response.choices.firstOrNull()?.message?.content
+                        ?.takeIf { it.isNotBlank() }
+                        ?: ""
+
+                    var translation = ""
+                    var example = ""
+
+                    if (jsonString.isNotBlank()) {
+                        try {
+                            val cleanJson = jsonString
+                                .replace(Regex("^```json\\s*"), "")
+                                .replace(Regex("^```\\s*"), "")
+                                .replace(Regex("\\s*```$"), "")
+                                .trim()
+
+                            // Simple manual JSON parsing to avoid Moshi dependency in chat module
+                            val translationMatch = Regex("\"translation\"\\s*:\\s*\"([^\"]+)\"").find(cleanJson)
+                            val exampleMatch = Regex("\"example\"\\s*:\\s*\"([^\"]+)\"").find(cleanJson)
+                            translation = translationMatch?.groupValues?.get(1) ?: ""
+                            example = exampleMatch?.groupValues?.get(1) ?: ""
+                        } catch (_: Exception) {}
+                    }
+
+                    savedWordDao.insert(
+                        SavedWordEntity(
+                            word = phrase,
+                            translation = translation,
+                            example = example,
+                            savedAt = System.currentTimeMillis(),
+                        )
+                    )
+                    savedCount++
+                } catch (_: Exception) {
+                    savedWordDao.insert(
+                        SavedWordEntity(
+                            word = phrase,
+                            translation = "",
+                            example = "",
+                            savedAt = System.currentTimeMillis(),
+                        )
+                    )
+                    savedCount++
+                }
+            }
+        }
     }
 
     fun toggleTranslation(messageId: Long) {
