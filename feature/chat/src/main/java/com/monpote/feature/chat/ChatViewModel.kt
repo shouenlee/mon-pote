@@ -274,8 +274,17 @@ class ChatViewModel @Inject constructor(
             val recentMessages = messageDao.getRecentMessages(conversationId, 20)
                 .sortedBy { it.timestamp }
 
+            // Build system prompt with natural reinforcement words
+            val reinforcementWords = savedWordDao.getReinforcementWords()
+            val systemPrompt = if (reinforcementWords.isNotEmpty()) {
+                character.systemPrompt + "\n\nMots à réutiliser naturellement dans la conversation quand le contexte s'y prête (ne force pas, utilise-les seulement si c'est pertinent) : " +
+                    reinforcementWords.joinToString(", ")
+            } else {
+                character.systemPrompt
+            }
+
             val apiMessages = buildList {
-                add(ChatMessage(role = "system", content = character.systemPrompt))
+                add(ChatMessage(role = "system", content = systemPrompt))
                 recentMessages.forEach { msg ->
                     add(ChatMessage(role = msg.role, content = msg.content))
                 }

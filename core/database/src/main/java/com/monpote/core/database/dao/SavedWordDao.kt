@@ -17,6 +17,9 @@ interface SavedWordDao {
     @Query("SELECT EXISTS(SELECT 1 FROM saved_words WHERE word = :word)")
     suspend fun existsByWord(word: String): Boolean
 
+    @Query("SELECT word FROM saved_words WHERE reinforcementEnabled = 1")
+    suspend fun getReinforcementWords(): List<String>
+
     @Insert
     suspend fun insert(word: SavedWordEntity): Long
 
