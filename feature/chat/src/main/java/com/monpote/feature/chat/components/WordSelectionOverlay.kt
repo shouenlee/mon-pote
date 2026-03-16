@@ -174,11 +174,75 @@ fun WordSelectionOverlay(
                         )
                     },
             ) {
-                words.forEachIndexed { index, word ->
-                    val isSelected = index in allSelectedIndices
-                    val isEmoji = word.matches(Regex("[\\p{So}\\p{Sc}\\p{Sk}\\p{Sm}]+"))
+                // Build a rendering plan: iterate through words, merging phrase selections into single merged pills
+                var skipUntil = -1
 
-                    if (!isEmoji) {
+                words.forEachIndexed { index, word ->
+                    if (index < skipUntil) return@forEachIndexed
+
+                    val isEmoji = word.matches(Regex("[\\p{So}\\p{Sc}\\p{Sk}\\p{Sm}]+"))
+                    if (isEmoji) {
+                        Text(
+                            text = word,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 2.dp, vertical = 6.dp),
+                        )
+                        return@forEachIndexed
+                    }
+
+                    // Check if this word is part of a multi-word phrase selection
+                    val selIdx = findSelection(index)
+                    val selection = if (selIdx >= 0) selections[selIdx] else null
+                    val isPhrase = selection != null && selection.indices.size > 1
+
+                    if (isPhrase && selection != null) {
+                        val phraseIndices = selection.indices.sorted()
+                        // Only render the merged pill at the first index of the phrase
+                        if (index == phraseIndices.first()) {
+                            skipUntil = phraseIndices.last() + 1
+
+                            // Merged pill with dot separators
+                            Box(
+                                modifier = Modifier
+                                    .onGloballyPositioned { coords ->
+                                        // Register bounds for each word index in the phrase
+                                        val bounds = coords.boundsInParent()
+                                        phraseIndices.forEach { pillBounds[it] = bounds }
+                                    }
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Primary)
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        selections = selections.toMutableList().apply { removeAt(selIdx) }
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    phraseIndices.forEachIndexed { i, idx ->
+                                        if (i > 0) {
+                                            Text(
+                                                text = " · ",
+                                                color = Color.White.copy(alpha = 0.4f),
+                                                fontSize = 13.sp,
+                                            )
+                                        }
+                                        Text(
+                                            text = words[idx],
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                        )
+                                    }
+                                    Text(
+                                        text = " ✓",
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        // Single word (selected or unselected)
+                        val isSelected = index in allSelectedIndices
                         Box(
                             modifier = Modifier
                                 .onGloballyPositioned { coords ->
@@ -190,10 +254,8 @@ fun WordSelectionOverlay(
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     val existingIdx = findSelection(index)
                                     if (existingIdx >= 0) {
-                                        // Deselect: remove the entire selection group containing this index
                                         selections = selections.toMutableList().apply { removeAt(existingIdx) }
                                     } else {
-                                        // Select: add as a new single-word selection
                                         selections = selections + Selection(setOf(index))
                                     }
                                 }
@@ -214,12 +276,6 @@ fun WordSelectionOverlay(
                                 }
                             }
                         }
-                    } else {
-                        Text(
-                            text = word,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(horizontal = 2.dp, vertical = 6.dp),
-                        )
                     }
                 }
             }
