@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -42,6 +43,15 @@ import com.monpote.core.ui.theme.SurfaceVariant
 import com.monpote.core.ui.theme.TextFaint
 import com.monpote.core.ui.theme.TextMuted
 
+/**
+ * A selection is an explicit group of word indices.
+ * - Tap creates a single-index selection: Selection(setOf(3))
+ * - Drag creates a range selection: Selection(setOf(3, 4, 5))
+ * Two adjacent taps remain separate: [Selection({3}), Selection({4})]
+ * One drag across 3→5 is one group: [Selection({3, 4, 5})]
+ */
+private data class Selection(val indices: Set<Int>)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun WordSelectionOverlay(
@@ -52,22 +62,30 @@ fun WordSelectionOverlay(
     val words = remember(messageContent) {
         messageContent.split(Regex("\\s+")).filter { it.isNotBlank() }
     }
-    var selectedIndices by remember { mutableStateOf(setOf<Int>()) }
+    // Explicit list of selections — each is a group of indices (single word or phrase)
+    var selections by remember { mutableStateOf(listOf<Selection>()) }
     var dragStartIndex by remember { mutableStateOf(-1) }
     var dragCurrentIndex by remember { mutableStateOf(-1) }
+    // Track which indices are part of the current in-progress drag (not yet committed)
+    var dragIndices by remember { mutableStateOf(setOf<Int>()) }
     val haptic = LocalHapticFeedback.current
+
+    // All currently selected indices (committed + in-progress drag)
+    val allSelectedIndices = selections.flatMap { it.indices }.toSet() + dragIndices
 
     // Track bounds of each pill for drag hit-testing
     val pillBounds = remember { mutableMapOf<Int, Rect>() }
 
-    // Find which pill index contains a given position
     fun hitTest(x: Float, y: Float): Int {
         for ((index, bounds) in pillBounds) {
-            if (bounds.contains(androidx.compose.ui.geometry.Offset(x, y))) {
-                return index
-            }
+            if (bounds.contains(Offset(x, y))) return index
         }
         return -1
+    }
+
+    // Find which selection group contains an index (if any)
+    fun findSelection(index: Int): Int {
+        return selections.indexOfFirst { index in it.indices }
     }
 
     Surface(
@@ -90,13 +108,13 @@ fun WordSelectionOverlay(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "S\u00e9lectionne les mots",
+                    text = "Sélectionne les mots",
                     color = TextMuted,
                     fontSize = 12.sp,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = "\u2715",
+                    text = "✕",
                     color = TextFaint,
                     fontSize = 16.sp,
                     modifier = Modifier
@@ -106,15 +124,12 @@ fun WordSelectionOverlay(
             }
 
             // Word pills with drag-to-select
-            var flowRowCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp, bottom = 14.dp)
-                    .onGloballyPositioned { flowRowCoords = it }
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDragStart = { offset ->
@@ -122,36 +137,45 @@ fun WordSelectionOverlay(
                                 if (idx >= 0) {
                                     dragStartIndex = idx
                                     dragCurrentIndex = idx
-                                    selectedIndices = selectedIndices + idx
+                                    dragIndices = setOf(idx)
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
                             },
                             onDrag = { change, _ ->
                                 change.consume()
                                 val idx = hitTest(change.position.x, change.position.y)
-                                if (idx >= 0 && idx != dragCurrentIndex && dragStartIndex >= 0) {
-                                    dragCurrentIndex = idx
-                                    // Select all indices between start and current
-                                    val rangeStart = minOf(dragStartIndex, idx)
-                                    val rangeEnd = maxOf(dragStartIndex, idx)
-                                    val rangeSet = (rangeStart..rangeEnd).toSet()
-                                    selectedIndices = selectedIndices + rangeSet
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                if (idx >= 0 && dragStartIndex >= 0) {
+                                    if (idx != dragCurrentIndex) {
+                                        dragCurrentIndex = idx
+                                        val rangeStart = minOf(dragStartIndex, idx)
+                                        val rangeEnd = maxOf(dragStartIndex, idx)
+                                        dragIndices = (rangeStart..rangeEnd).toSet()
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
                                 }
                             },
                             onDragEnd = {
+                                if (dragIndices.isNotEmpty()) {
+                                    // Remove any existing selections that overlap with drag
+                                    val cleaned = selections.filter { sel ->
+                                        sel.indices.none { it in dragIndices }
+                                    }
+                                    selections = cleaned + Selection(dragIndices)
+                                }
                                 dragStartIndex = -1
                                 dragCurrentIndex = -1
+                                dragIndices = emptySet()
                             },
                             onDragCancel = {
                                 dragStartIndex = -1
                                 dragCurrentIndex = -1
+                                dragIndices = emptySet()
                             },
                         )
                     },
             ) {
                 words.forEachIndexed { index, word ->
-                    val isSelected = index in selectedIndices
+                    val isSelected = index in allSelectedIndices
                     val isEmoji = word.matches(Regex("[\\p{So}\\p{Sc}\\p{Sk}\\p{Sm}]+"))
 
                     if (!isEmoji) {
@@ -164,10 +188,13 @@ fun WordSelectionOverlay(
                                 .background(if (isSelected) Primary else SurfaceVariant)
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    selectedIndices = if (isSelected) {
-                                        selectedIndices - index
+                                    val existingIdx = findSelection(index)
+                                    if (existingIdx >= 0) {
+                                        // Deselect: remove the entire selection group containing this index
+                                        selections = selections.toMutableList().apply { removeAt(existingIdx) }
                                     } else {
-                                        selectedIndices + index
+                                        // Select: add as a new single-word selection
+                                        selections = selections + Selection(setOf(index))
                                     }
                                 }
                                 .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -198,25 +225,23 @@ fun WordSelectionOverlay(
             }
 
             // Save button
-            val selectedCount = getSelectionGroups(selectedIndices).size
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (selectedIndices.isNotEmpty()) Primary else Primary.copy(alpha = 0.3f))
-                    .clickable(enabled = selectedIndices.isNotEmpty()) {
-                        val groups = getSelectionGroups(selectedIndices)
-                        val phrases = groups.map { group ->
-                            group.map { words[it] }.joinToString(" ")
+                    .background(if (selections.isNotEmpty()) Primary else Primary.copy(alpha = 0.3f))
+                    .clickable(enabled = selections.isNotEmpty()) {
+                        val phrases = selections.map { sel ->
+                            sel.indices.sorted().map { words[it] }.joinToString(" ")
                         }
                         onSave(phrases)
                     }
                     .padding(vertical = 12.dp),
             ) {
                 Text(
-                    text = if (selectedIndices.isEmpty()) "Sauvegarder"
-                    else "Sauvegarder ($selectedCount)",
+                    text = if (selections.isEmpty()) "Sauvegarder"
+                    else "Sauvegarder (${selections.size})",
                     color = Color.White,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -224,26 +249,4 @@ fun WordSelectionOverlay(
             }
         }
     }
-}
-
-/**
- * Groups consecutive selected indices into phrase groups.
- * e.g., {0, 1, 2, 5, 6} -> [[0,1,2], [5,6]]
- */
-private fun getSelectionGroups(indices: Set<Int>): List<List<Int>> {
-    if (indices.isEmpty()) return emptyList()
-    val sorted = indices.sorted()
-    val groups = mutableListOf<MutableList<Int>>()
-    var currentGroup = mutableListOf(sorted.first())
-
-    for (i in 1 until sorted.size) {
-        if (sorted[i] == sorted[i - 1] + 1) {
-            currentGroup.add(sorted[i])
-        } else {
-            groups.add(currentGroup)
-            currentGroup = mutableListOf(sorted[i])
-        }
-    }
-    groups.add(currentGroup)
-    return groups
 }
