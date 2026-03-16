@@ -101,7 +101,13 @@ class ChatViewModel @Inject constructor(
 
     fun sendOpeningMessage() {
         viewModelScope.launch {
-            if (_uiState.value.messages.isNotEmpty()) return@launch
+            // Wait for conversation to be initialized
+            while (conversationId == -1L) {
+                kotlinx.coroutines.delay(50)
+            }
+            // Check database directly — UI state may not have loaded yet
+            val existingMessages = messageDao.getRecentMessages(conversationId, 1)
+            if (existingMessages.isNotEmpty()) return@launch
             fetchAiResponse()
         }
     }
