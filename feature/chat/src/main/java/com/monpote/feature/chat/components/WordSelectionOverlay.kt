@@ -4,7 +4,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -28,11 +26,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,10 +54,21 @@ fun WordSelectionOverlay(
     }
     var selectedIndices by remember { mutableStateOf(setOf<Int>()) }
     var dragStartIndex by remember { mutableStateOf(-1) }
+    var dragCurrentIndex by remember { mutableStateOf(-1) }
     val haptic = LocalHapticFeedback.current
 
-    // Track positions of each pill for drag detection
-    val pillPositions = remember { mutableMapOf<Int, Pair<Float, Float>>() }
+    // Track bounds of each pill for drag hit-testing
+    val pillBounds = remember { mutableMapOf<Int, Rect>() }
+
+    // Find which pill index contains a given position
+    fun hitTest(x: Float, y: Float): Int {
+        for ((index, bounds) in pillBounds) {
+            if (bounds.contains(androidx.compose.ui.geometry.Offset(x, y))) {
+                return index
+            }
+        }
+        return -1
+    }
 
     Surface(
         shape = RoundedCornerShape(4.dp, 18.dp, 18.dp, 18.dp),
@@ -94,13 +105,50 @@ fun WordSelectionOverlay(
                 )
             }
 
-            // Word pills
+            // Word pills with drag-to-select
+            var flowRowCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 14.dp),
+                    .padding(top = 12.dp, bottom = 14.dp)
+                    .onGloballyPositioned { flowRowCoords = it }
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = { offset ->
+                                val idx = hitTest(offset.x, offset.y)
+                                if (idx >= 0) {
+                                    dragStartIndex = idx
+                                    dragCurrentIndex = idx
+                                    selectedIndices = selectedIndices + idx
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                            onDrag = { change, _ ->
+                                change.consume()
+                                val idx = hitTest(change.position.x, change.position.y)
+                                if (idx >= 0 && idx != dragCurrentIndex && dragStartIndex >= 0) {
+                                    dragCurrentIndex = idx
+                                    // Select all indices between start and current
+                                    val rangeStart = minOf(dragStartIndex, idx)
+                                    val rangeEnd = maxOf(dragStartIndex, idx)
+                                    val rangeSet = (rangeStart..rangeEnd).toSet()
+                                    selectedIndices = selectedIndices + rangeSet
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                            onDragEnd = {
+                                dragStartIndex = -1
+                                dragCurrentIndex = -1
+                            },
+                            onDragCancel = {
+                                dragStartIndex = -1
+                                dragCurrentIndex = -1
+                            },
+                        )
+                    },
             ) {
                 words.forEachIndexed { index, word ->
                     val isSelected = index in selectedIndices
@@ -110,8 +158,7 @@ fun WordSelectionOverlay(
                         Box(
                             modifier = Modifier
                                 .onGloballyPositioned { coords ->
-                                    val pos = coords.positionInParent()
-                                    pillPositions[index] = Pair(pos.x, pos.y)
+                                    pillBounds[index] = coords.boundsInParent()
                                 }
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (isSelected) Primary else SurfaceVariant)
@@ -133,7 +180,7 @@ fun WordSelectionOverlay(
                                 )
                                 if (isSelected) {
                                     Text(
-                                        text = " \u2713",
+                                        text = " ✓",
                                         color = Color.White,
                                         fontSize = 11.sp,
                                     )
