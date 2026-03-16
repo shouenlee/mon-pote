@@ -19,4 +19,5 @@ data class ChatUiState(
     val correctionState: CorrectionState = CorrectionState.IDLE,
     val correctionResult: CorrectionResult? = null,
     val visibleTranslations: Set<Long> = emptySet(),
+    val wordSelectionMessageId: Long? = null,
 )

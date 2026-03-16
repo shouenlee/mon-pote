@@ -41,6 +41,7 @@ fun MessageBubble(
     message: Message,
     character: Character?,
     onLongPress: (() -> Unit)? = null,
+    onDoubleTap: (() -> Unit)? = null,
 ) {
     val isUser = message.role == Role.USER
     val maxWidth = (LocalConfiguration.current.screenWidthDp * 0.8).dp
@@ -75,18 +76,32 @@ fun MessageBubble(
                 )
                 .scale(scale.value)
                 .then(
-                    if (!isUser && onLongPress != null) {
+                    if (!isUser && (onLongPress != null || onDoubleTap != null)) {
                         Modifier.pointerInput(Unit) {
-                            detectTapGestures(onLongPress = {
-                                scope.launch {
-                                    // Single bounce: squish → overshoot → settle
-                                    scale.animateTo(0.96f, animationSpec = tween(80))
-                                    scale.animateTo(1.02f, animationSpec = tween(100))
-                                    scale.animateTo(1f, animationSpec = tween(80))
-                                }
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onLongPress()
-                            })
+                            detectTapGestures(
+                                onLongPress = if (onLongPress != null) {
+                                    {
+                                        scope.launch {
+                                            scale.animateTo(0.96f, animationSpec = tween(80))
+                                            scale.animateTo(1.02f, animationSpec = tween(100))
+                                            scale.animateTo(1f, animationSpec = tween(80))
+                                        }
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onLongPress()
+                                    }
+                                } else null,
+                                onDoubleTap = if (onDoubleTap != null) {
+                                    {
+                                        scope.launch {
+                                            // Pulse animation (distinct from long-press bounce)
+                                            scale.animateTo(1.04f, animationSpec = tween(100))
+                                            scale.animateTo(1f, animationSpec = tween(100))
+                                        }
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        onDoubleTap()
+                                    }
+                                } else null,
+                            )
                         }
                     } else Modifier
                 ),

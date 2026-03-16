@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
@@ -7,25 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.monpote"
+    namespace = "com.monpote.feature.vocabulary"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.monpote"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
     }
 
     compileOptions {
@@ -43,24 +29,20 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:model"))
     implementation(project(":core:database"))
+    implementation(project(":core:model"))
     implementation(project(":core:ui"))
-    implementation(project(":feature:onboarding"))
-    implementation(project(":feature:chat"))
-    implementation(project(":feature:correction"))
-    implementation(project(":feature:vocabulary"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)
-    implementation(libs.activity.compose)
-    implementation(libs.navigation.compose)
+    implementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.compose.ui.tooling)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
-    implementation(libs.datastore.preferences)
+    implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)
-    implementation(libs.core.ktx)
+    implementation(libs.coroutines.android)
 }

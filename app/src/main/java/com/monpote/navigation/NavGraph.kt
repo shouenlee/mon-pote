@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.monpote.feature.chat.ChatScreen
 import com.monpote.feature.onboarding.OnboardingScreen
+import com.monpote.feature.vocabulary.VocabularyScreen
 import com.monpote.feature.onboarding.PreferencesKeys
 import com.monpote.feature.onboarding.dataStore
 import kotlinx.coroutines.flow.first
@@ -73,6 +74,15 @@ fun NavGraph() {
                         popUpTo("chat/$characterId") { inclusive = true }
                     }
                 },
+                onNavigateToVocabulary = {
+                    navController.navigate("vocabulary")
+                },
+            )
+        }
+
+        composable("vocabulary") {
+            VocabularyScreen(
+                onNavigateBack = { navController.popBackStack() },
             )
         }
     }

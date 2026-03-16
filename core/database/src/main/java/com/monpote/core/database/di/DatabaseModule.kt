@@ -5,10 +5,12 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.monpote.core.database.MIGRATION_1_2
+import com.monpote.core.database.MIGRATION_2_3
 import com.monpote.core.database.MonPoteDatabase
 import com.monpote.core.database.dao.CharacterDao
 import com.monpote.core.database.dao.ConversationDao
 import com.monpote.core.database.dao.MessageDao
+import com.monpote.core.database.dao.SavedWordDao
 import com.monpote.core.database.seed.CharacterSeeder
 import dagger.Module
 import dagger.Provides
@@ -33,7 +35,7 @@ object DatabaseModule {
             MonPoteDatabase::class.java,
             "monpote.db",
         )
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     super.onCreate(db)
@@ -54,4 +56,7 @@ object DatabaseModule {
 
     @Provides
     fun provideMessageDao(database: MonPoteDatabase): MessageDao = database.messageDao()
+
+    @Provides
+    fun provideSavedWordDao(database: MonPoteDatabase): SavedWordDao = database.savedWordDao()
 }
