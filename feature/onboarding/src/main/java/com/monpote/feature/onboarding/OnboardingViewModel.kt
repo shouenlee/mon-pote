@@ -51,14 +51,20 @@ class OnboardingViewModel @Inject constructor(
                 prefs[PreferencesKeys.SELECTED_CHARACTER_ID] = characterId
             }
 
-            val now = System.currentTimeMillis()
-            val conversationId = conversationDao.insert(
-                ConversationEntity(
-                    characterId = characterId,
-                    createdAt = now,
-                    lastMessageAt = now,
+            // Resume existing conversation if one exists, otherwise create new
+            val existing = conversationDao.getLatestConversation(characterId)
+            val conversationId = if (existing != null) {
+                existing.id
+            } else {
+                val now = System.currentTimeMillis()
+                conversationDao.insert(
+                    ConversationEntity(
+                        characterId = characterId,
+                        createdAt = now,
+                        lastMessageAt = now,
+                    )
                 )
-            )
+            }
 
             onComplete(conversationId)
         }
