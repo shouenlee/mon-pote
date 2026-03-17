@@ -11,3 +11,5 @@
 *.ap_
 *.dex
 .superpowers/
+**/build/
+.kotlin/
