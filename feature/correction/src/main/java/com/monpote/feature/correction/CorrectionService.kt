@@ -28,7 +28,13 @@ Pour chaque erreur, donne :
 - "correction" : la forme correcte
 - "explanation" : une explication courte en français
 
-Si le message ne contient aucune erreur, retourne {"errors": []}.
+IMPORTANT — Contexte : c'est une conversation informelle par texto entre potes. Adapte ton niveau d'exigence :
+- IGNORE les majuscules manquantes (début de phrase, noms propres) — c'est normal dans les textos
+- IGNORE la ponctuation manquante ou simplifiée (pas de point final, pas de virgules) — c'est normal dans les textos
+- Concentre-toi sur les VRAIES erreurs : orthographe, conjugaison, accords, genre, syntaxe, accents
+- Ne signale la ponctuation ou les majuscules QUE si l'absence crée une vraie ambiguïté de sens
+
+Si le message ne contient aucune erreur significative, retourne {"errors": []}.
 
 IMPORTANT : Réponds UNIQUEMENT avec le JSON valide, sans texte avant ou après.
         """.trimIndent()
